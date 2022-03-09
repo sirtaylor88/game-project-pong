@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -17,57 +18,59 @@ type Paddle struct {
 var screen tcell.Screen
 var player1 *Paddle
 var player2 *Paddle
+var debugLog string
 
-func printScreen(row, col int, str string) {
-	for _, c := range str {
-		screen.SetContent(col, row, c, nil, tcell.StyleDefault)
-		col++
-	}
-}
+func main() {
+	initScreen()
+	initGameState()
+	inputChan := initUserInput()
 
-func print(row, col, width, height int, ch rune) {
-	for r := 0; r < height; r++ {
-		for c := 0; c < width; c++ {
-			screen.SetContent(col+c, row+r, ch, nil, tcell.StyleDefault)
-		}
+	for {
+		drawState()
+		time.Sleep(50 * time.Millisecond)
+
+		key := readInput(inputChan)
+		handleUserInput(key)
 	}
+	// Draw ball
+	// Update ball movement
+	// Handle collisions
+	// Handle game over
+
 }
 
 func drawState() {
 	screen.Clear()
 
+	printString(0, 0, debugLog)
 	print(player1.row, player1.col, player1.width, player1.height, PaddleSymbol)
 	print(player2.row, player2.col, player2.width, player2.height, PaddleSymbol)
 
 	screen.Show()
 }
 
-func main() {
-	initScreen()
-	initGameState()
-	drawState()
-
-	for {
-		switch ev := screen.PollEvent().(type) {
-		case *tcell.EventResize:
-			screen.Sync()
-			drawState()
-		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEscape {
-				screen.Fini()
-				os.Exit(0)
-			}
-		}
+func handleUserInput(key string) {
+	if key == "Rune[q]" {
+		screen.Fini()
+		os.Exit(0)
+	} else if key == "Rune[z]" && player1.isPaddleInsideBoundary("up") {
+		player1.row--
+	} else if key == "Rune[s]" && player1.isPaddleInsideBoundary("down") {
+		player1.row++
+	} else if key == "Up" && player2.isPaddleInsideBoundary("up") {
+		player2.row--
+	} else if key == "Down" && player2.isPaddleInsideBoundary("down") {
+		player2.row++
 	}
+}
 
-	// Draw paddles
-	// Player movement
-	// Take care of paddle boundaries
-	// Draw ball
-	// Update ball movement
-	// Handle collisions
-	// Handle game over
-
+func (player *Paddle) isPaddleInsideBoundary(direction string) bool {
+	_, screenHeight := screen.Size()
+	if direction == "up" {
+		return player.row > 0
+	} else {
+		return player.row+PaddleHeight < screenHeight
+	}
 }
 
 func initScreen() {
@@ -104,5 +107,49 @@ func initGameState() {
 		col:    width - 1,
 		width:  1,
 		height: PaddleHeight,
+	}
+}
+
+func initUserInput() chan string {
+	inputChan := make(chan string)
+	go func() {
+		for {
+
+			switch ev := screen.PollEvent().(type) {
+			case *tcell.EventResize:
+				screen.Sync()
+				drawState()
+			case *tcell.EventKey:
+				inputChan <- ev.Name()
+			}
+		}
+	}()
+
+	return inputChan
+}
+
+func readInput(inputChan chan string) string {
+	var key string
+	select {
+	case key = <-inputChan:
+	default:
+		key = ""
+	}
+
+	return key
+}
+
+func printString(row, col int, str string) {
+	for _, c := range str {
+		screen.SetContent(col, row, c, nil, tcell.StyleDefault)
+		col++
+	}
+}
+
+func print(row, col, width, height int, ch rune) {
+	for r := 0; r < height; r++ {
+		for c := 0; c < width; c++ {
+			screen.SetContent(col+c, row+r, ch, nil, tcell.StyleDefault)
+		}
 	}
 }
