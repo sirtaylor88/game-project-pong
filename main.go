@@ -9,16 +9,22 @@ import (
 )
 
 const PaddleSymbol = 0x2588
+const BallSymbol = 0x25cf
+
 const PaddleHeight = 4
 
-type Paddle struct {
+type GameObject struct {
 	row, col, width, height int
+	symbol                  rune
 }
 
 var screen tcell.Screen
-var player1 *Paddle
-var player2 *Paddle
+var player1Paddle *GameObject
+var player2Paddle *GameObject
+var ball *GameObject
 var debugLog string
+
+var gameObjects []*GameObject
 
 func main() {
 	initScreen()
@@ -43,8 +49,9 @@ func drawState() {
 	screen.Clear()
 
 	printString(0, 0, debugLog)
-	print(player1.row, player1.col, player1.width, player1.height, PaddleSymbol)
-	print(player2.row, player2.col, player2.width, player2.height, PaddleSymbol)
+	for _, obj := range gameObjects {
+		print(obj.row, obj.col, obj.width, obj.height, obj.symbol)
+	}
 
 	screen.Show()
 }
@@ -53,23 +60,23 @@ func handleUserInput(key string) {
 	if key == "Rune[q]" {
 		screen.Fini()
 		os.Exit(0)
-	} else if key == "Rune[z]" && player1.isPaddleInsideBoundary("up") {
-		player1.row--
-	} else if key == "Rune[s]" && player1.isPaddleInsideBoundary("down") {
-		player1.row++
-	} else if key == "Up" && player2.isPaddleInsideBoundary("up") {
-		player2.row--
-	} else if key == "Down" && player2.isPaddleInsideBoundary("down") {
-		player2.row++
+	} else if key == "Rune[z]" && player1Paddle.isPaddleInsideBoundary("up") {
+		player1Paddle.row--
+	} else if key == "Rune[s]" && player1Paddle.isPaddleInsideBoundary("down") {
+		player1Paddle.row++
+	} else if key == "Up" && player2Paddle.isPaddleInsideBoundary("up") {
+		player2Paddle.row--
+	} else if key == "Down" && player2Paddle.isPaddleInsideBoundary("down") {
+		player2Paddle.row++
 	}
 }
 
-func (player *Paddle) isPaddleInsideBoundary(direction string) bool {
+func (playerPaddle *GameObject) isPaddleInsideBoundary(direction string) bool {
 	_, screenHeight := screen.Size()
 	if direction == "up" {
-		return player.row > 0
+		return playerPaddle.row > 0
 	} else {
-		return player.row+PaddleHeight < screenHeight
+		return playerPaddle.row+PaddleHeight < screenHeight
 	}
 }
 
@@ -95,18 +102,32 @@ func initGameState() {
 	width, height := screen.Size()
 	paddleStart := height/2 - PaddleHeight/2
 
-	player1 = &Paddle{
+	player1Paddle = &GameObject{
 		row:    paddleStart,
 		col:    0,
 		width:  1,
 		height: PaddleHeight,
+		symbol: PaddleSymbol,
 	}
 
-	player2 = &Paddle{
+	player2Paddle = &GameObject{
 		row:    paddleStart,
 		col:    width - 1,
 		width:  1,
 		height: PaddleHeight,
+		symbol: PaddleSymbol,
+	}
+
+	ball = &GameObject{
+		row:    height / 2,
+		col:    width / 2,
+		width:  1,
+		height: 1,
+		symbol: BallSymbol,
+	}
+
+	gameObjects = []*GameObject{
+		player1Paddle, player2Paddle, ball,
 	}
 }
 
