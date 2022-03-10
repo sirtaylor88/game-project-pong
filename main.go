@@ -58,6 +58,12 @@ func drawState() {
 	screen.Show()
 }
 
+func collidesWithWall(obj *GameObject) bool {
+	_, screenHeight := screen.Size()
+
+	return obj.row+obj.velRow < 0 || obj.row+obj.velRow >= screenHeight
+}
+
 func handleUserInput(key string) {
 	if key == "Rune[q]" {
 		screen.Fini()
@@ -143,6 +149,10 @@ func updateState() {
 	for i := range gameObjects {
 		gameObjects[i].row += gameObjects[i].velRow
 		gameObjects[i].col += gameObjects[i].velCol
+	}
+
+	if collidesWithWall(ball) {
+		ball.velRow = -ball.velRow
 	}
 }
 
