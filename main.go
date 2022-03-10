@@ -26,7 +26,8 @@ var screen tcell.Screen
 var player1Paddle *GameObject
 var player2Paddle *GameObject
 var ball *GameObject
-var debugLog string
+
+// var debugLog string
 var isGamePaused bool
 
 var gameObjects []*GameObject
@@ -36,16 +37,21 @@ func main() {
 	initGameState()
 	inputChan := initUserInput()
 
-	for {
+	for !isGameOver() {
 		handleUserInput(readInput(inputChan))
 		updateState()
 		drawState()
 
 		time.Sleep(100 * time.Millisecond)
 	}
-	// Handle collisions
-	// Handle game over
 
+	screenWidth, screenHeight := screen.Size()
+	winner := getWinner()
+	printStringCenter(screenHeight/2-1, screenWidth/2, "Game over")
+	printStringCenter(screenHeight/2, screenWidth/2, fmt.Sprintf("%s wins...", winner))
+	screen.Show()
+	time.Sleep(3 * time.Second)
+	screen.Fini()
 }
 
 func drawState() {
@@ -55,7 +61,7 @@ func drawState() {
 
 	screen.Clear()
 
-	printString(0, 0, debugLog)
+	// printString(0, 0, debugLog)
 	for _, obj := range gameObjects {
 		print(obj.row, obj.col, obj.width, obj.height, obj.symbol)
 	}
@@ -105,6 +111,21 @@ func (playerPaddle *GameObject) isPaddleInsideBoundary(direction string) bool {
 		return playerPaddle.row > 0
 	} else {
 		return playerPaddle.row+PaddleHeight < screenHeight
+	}
+}
+
+func isGameOver() bool {
+	return getWinner() != ""
+}
+
+func getWinner() string {
+	screenWidth, _ := screen.Size()
+	if ball.col < 0 {
+		return "Player 2"
+	} else if ball.col >= screenWidth {
+		return "Player 1"
+	} else {
+		return ""
 	}
 }
 
@@ -175,12 +196,12 @@ func updateState() {
 		gameObjects[i].col += gameObjects[i].velCol
 	}
 
-	debugLog = fmt.Sprintf(
-		"ball: row=%d, col=%d\npaddle1: row=%d, col=%d\npaddle2: row=%d, col=%d",
-		ball.row, ball.col,
-		player1Paddle.row, player1Paddle.col,
-		player2Paddle.row, player2Paddle.col,
-	)
+	// debugLog = fmt.Sprintf(
+	// 	"ball: row=%d, col=%d\npaddle1: row=%d, col=%d\npaddle2: row=%d, col=%d",
+	// 	ball.row, ball.col,
+	// 	player1Paddle.row, player1Paddle.col,
+	// 	player2Paddle.row, player2Paddle.col,
+	// )
 
 	if collidesWithWall(ball) {
 		ball.velRow = -ball.velRow
@@ -218,6 +239,12 @@ func readInput(inputChan chan string) string {
 	}
 
 	return key
+}
+
+func printStringCenter(row, col int, str string) {
+	col -= len(str) / 2
+
+	printString(row, col, str)
 }
 
 func printString(row, col int, str string) {
