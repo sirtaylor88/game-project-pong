@@ -20,6 +20,7 @@ type GameObject struct {
 	row, col, width, height int
 	velRow, velCol          int
 	symbol                  rune
+	color                   tcell.Style
 }
 
 var screen tcell.Screen
@@ -57,8 +58,8 @@ func main() {
 func clearScreen() {
 	for _, obj := range gameObjects {
 		screenWidth, screenHeight := screen.Size()
-		print(0, obj.col, obj.width, screenHeight, 0x20)
-		print(obj.row-obj.velRow, obj.col-obj.velCol, screenWidth, screenHeight, 0x20)
+		print(0, obj.col, obj.width, screenHeight, 0x20, tcell.StyleDefault)
+		print(obj.row-obj.velRow, obj.col-obj.velCol, screenWidth, screenHeight, 0x20, tcell.StyleDefault)
 	}
 }
 
@@ -72,7 +73,7 @@ func drawState() {
 
 	// printString(0, 0, debugLog)
 	for _, obj := range gameObjects {
-		print(obj.row, obj.col, obj.width, obj.height, obj.symbol)
+		print(obj.row, obj.col, obj.width, obj.height, obj.symbol, obj.color)
 	}
 
 	screen.Show()
@@ -151,7 +152,7 @@ func initScreen() {
 	}
 
 	defStyle := tcell.StyleDefault.
-		Background(tcell.ColorBlack).
+		Background(tcell.ColorDarkBlue).
 		Foreground(tcell.ColorWhite)
 	screen.SetStyle(defStyle)
 }
@@ -168,6 +169,7 @@ func initGameState() {
 		velRow: 0,
 		velCol: 0,
 		symbol: PaddleSymbol,
+		color:  tcell.StyleDefault.Foreground(tcell.ColorRed),
 	}
 
 	player2Paddle = &GameObject{
@@ -178,6 +180,7 @@ func initGameState() {
 		velRow: 0,
 		velCol: 0,
 		symbol: PaddleSymbol,
+		color:  tcell.StyleDefault.Foreground(tcell.ColorGreen),
 	}
 
 	ball = &GameObject{
@@ -188,6 +191,7 @@ func initGameState() {
 		velRow: InitialBallVelocityRow,
 		velCol: InitialBallVelocityCol,
 		symbol: BallSymbol,
+		color:  tcell.StyleDefault.Foreground(tcell.ColorYellow),
 	}
 
 	gameObjects = []*GameObject{
@@ -263,10 +267,10 @@ func printString(row, col int, str string) {
 	}
 }
 
-func print(row, col, width, height int, ch rune) {
+func print(row, col, width, height int, ch rune, color tcell.Style) {
 	for r := 0; r < height; r++ {
 		for c := 0; c < width; c++ {
-			screen.SetContent(col+c, row+r, ch, nil, tcell.StyleDefault)
+			screen.SetContent(col+c, row+r, ch, nil, color)
 		}
 	}
 }
