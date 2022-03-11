@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -34,6 +35,7 @@ var isGamePaused bool
 var gameObjects []*GameObject
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	initScreen()
 	initGameState()
 	inputChan := initUserInput()
@@ -188,8 +190,8 @@ func initGameState() {
 		col:    screenWidth / 2,
 		width:  1,
 		height: 1,
-		velRow: InitialBallVelocityRow,
-		velCol: InitialBallVelocityCol,
+		velRow: InitialBallVelocityRow + rand.Intn(3),
+		velCol: InitialBallVelocityCol + rand.Intn(4),
 		symbol: BallSymbol,
 		color:  tcell.StyleDefault.Foreground(tcell.ColorYellow),
 	}
