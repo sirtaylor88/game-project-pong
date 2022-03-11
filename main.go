@@ -54,12 +54,21 @@ func main() {
 	screen.Fini()
 }
 
+func clearScreen() {
+	for _, obj := range gameObjects {
+		screenWidth, screenHeight := screen.Size()
+		print(0, obj.col, obj.width, screenHeight, 0x20)
+		print(obj.row-obj.velRow, obj.col-obj.velCol, screenWidth, screenHeight, 0x20)
+	}
+}
+
 func drawState() {
 	if isGamePaused {
 		return
 	}
 
-	screen.Clear()
+	// screen.Clear()
+	clearScreen()
 
 	// printString(0, 0, debugLog)
 	for _, obj := range gameObjects {
@@ -148,8 +157,8 @@ func initScreen() {
 }
 
 func initGameState() {
-	width, height := screen.Size()
-	paddleStart := height/2 - PaddleHeight/2
+	screenWidth, screenHeight := screen.Size()
+	paddleStart := screenHeight/2 - PaddleHeight/2
 
 	player1Paddle = &GameObject{
 		row:    paddleStart,
@@ -163,7 +172,7 @@ func initGameState() {
 
 	player2Paddle = &GameObject{
 		row:    paddleStart,
-		col:    width - 1,
+		col:    screenWidth - 1,
 		width:  1,
 		height: PaddleHeight,
 		velRow: 0,
@@ -172,8 +181,8 @@ func initGameState() {
 	}
 
 	ball = &GameObject{
-		row:    height / 2,
-		col:    width / 2,
+		row:    screenHeight / 2,
+		col:    screenWidth / 2,
 		width:  1,
 		height: 1,
 		velRow: InitialBallVelocityRow,
