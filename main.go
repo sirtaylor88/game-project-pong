@@ -12,7 +12,10 @@ import (
 const PaddleSymbol = 0x2588
 const BallSymbol = 0x25cf
 
-const PaddleHeight = 4
+const PaddleHeight = 8
+
+const BoundaryOffsetRow = 5
+const BoundaryOffsetCol = 10
 
 const InitialBallVelocityRow = 1
 const InitialBallVelocityCol = 2
@@ -31,6 +34,8 @@ var ball *GameObject
 
 // var debugLog string
 var isGamePaused bool
+var netColor tcell.Style
+var tableColor tcell.Style
 
 var gameObjects []*GameObject
 
@@ -51,7 +56,10 @@ func main() {
 	screenWidth, screenHeight := screen.Size()
 	winner := getWinner()
 	printStringCenter(screenHeight/2-1, screenWidth/2, "Game over")
-	printStringCenter(screenHeight/2, screenWidth/2, fmt.Sprintf("%s wins...", winner))
+	printStringCenter(
+		screenHeight/2, screenWidth/2,
+		fmt.Sprintf("%s wins...", winner),
+	)
 	screen.Show()
 	time.Sleep(3 * time.Second)
 	screen.Fini()
@@ -60,8 +68,14 @@ func main() {
 func clearScreen() {
 	for _, obj := range gameObjects {
 		screenWidth, screenHeight := screen.Size()
-		print(0, obj.col, obj.width, screenHeight, 0x20, tcell.StyleDefault)
-		print(obj.row-obj.velRow, obj.col-obj.velCol, screenWidth, screenHeight, 0x20, tcell.StyleDefault)
+		print(
+			0, obj.col, obj.width, screenHeight,
+			0x20, tcell.StyleDefault,
+		)
+		print(
+			obj.row-obj.velRow, obj.col-obj.velCol,
+			screenWidth, screenHeight, 0x20, tcell.StyleDefault,
+		)
 	}
 }
 
@@ -74,17 +88,34 @@ func drawState() {
 	clearScreen()
 
 	// printString(0, 0, debugLog)
+	printPongTable()
+
+	screenWidth, _ := screen.Size()
 	for _, obj := range gameObjects {
-		print(obj.row, obj.col, obj.width, obj.height, obj.symbol, obj.color)
+		if obj.col > BoundaryOffsetCol &&
+			obj.col < screenWidth-BoundaryOffsetCol-1 {
+			if obj.col == screenWidth/2 {
+				print(
+					obj.row, obj.col, obj.width, obj.height,
+					obj.symbol, netColor,
+				)
+			} else {
+				print(
+					obj.row, obj.col, obj.width, obj.height,
+					obj.symbol, obj.color,
+				)
+			}
+		}
 	}
 
 	screen.Show()
 }
 
-func collidesWithWall(obj *GameObject) bool {
+func collidesWithWall(ball *GameObject) bool {
 	_, screenHeight := screen.Size()
 
-	return obj.row+obj.velRow < 0 || obj.row+obj.velRow >= screenHeight
+	return ball.row+ball.velRow < BoundaryOffsetRow ||
+		ball.row+ball.velRow >= screenHeight-BoundaryOffsetRow
 }
 
 func collidesWithPaddle(ball, paddle *GameObject) bool {
@@ -120,9 +151,9 @@ func handleUserInput(key string) {
 func (playerPaddle *GameObject) isPaddleInsideBoundary(direction string) bool {
 	_, screenHeight := screen.Size()
 	if direction == "up" {
-		return playerPaddle.row > 0
+		return playerPaddle.row > BoundaryOffsetRow
 	} else {
-		return playerPaddle.row+PaddleHeight < screenHeight
+		return playerPaddle.row+PaddleHeight < screenHeight-BoundaryOffsetRow
 	}
 }
 
@@ -144,6 +175,7 @@ func getWinner() string {
 func initScreen() {
 	var err error
 	screen, err = tcell.NewScreen()
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -157,15 +189,23 @@ func initScreen() {
 		Background(tcell.ColorDarkBlue).
 		Foreground(tcell.ColorWhite)
 	screen.SetStyle(defStyle)
+
+	screenWidth, screenHeight := screen.Size()
+	if screenWidth <= 100 || screenHeight <= 30 {
+		fmt.Fprintln(os.Stderr, "The screen is too small.")
+		os.Exit(1)
+	}
 }
 
 func initGameState() {
 	screenWidth, screenHeight := screen.Size()
 	paddleStart := screenHeight/2 - PaddleHeight/2
 
+	netColor = tcell.StyleDefault.Background(tcell.ColorWhite)
+	tableColor = tcell.StyleDefault.Background(tcell.ColorLightGreen)
 	player1Paddle = &GameObject{
 		row:    paddleStart,
-		col:    0,
+		col:    BoundaryOffsetCol + 5,
 		width:  1,
 		height: PaddleHeight,
 		velRow: 0,
@@ -176,13 +216,13 @@ func initGameState() {
 
 	player2Paddle = &GameObject{
 		row:    paddleStart,
-		col:    screenWidth - 1,
+		col:    screenWidth - BoundaryOffsetCol - 6,
 		width:  1,
 		height: PaddleHeight,
 		velRow: 0,
 		velCol: 0,
 		symbol: PaddleSymbol,
-		color:  tcell.StyleDefault.Foreground(tcell.ColorGreen),
+		color:  tcell.StyleDefault.Foreground(tcell.ColorBlue),
 	}
 
 	ball = &GameObject{
@@ -190,15 +230,16 @@ func initGameState() {
 		col:    screenWidth / 2,
 		width:  1,
 		height: 1,
-		velRow: InitialBallVelocityRow + rand.Intn(3),
-		velCol: InitialBallVelocityCol + rand.Intn(4),
+		velRow: InitialBallVelocityRow + rand.Intn(1),
+		velCol: InitialBallVelocityCol + rand.Intn(1),
 		symbol: BallSymbol,
-		color:  tcell.StyleDefault.Foreground(tcell.ColorYellow),
+		color:  tableColor.Foreground(tcell.ColorYellow),
 	}
 
 	gameObjects = []*GameObject{
 		player1Paddle, player2Paddle, ball,
 	}
+
 }
 
 func updateState() {
@@ -212,7 +253,7 @@ func updateState() {
 	}
 
 	// debugLog = fmt.Sprintf(
-	// 	"ball: row=%d, col=%d\npaddle1: row=%d, col=%d\npaddle2: row=%d, col=%d",
+	// 	"ball: row=%d, col=%d\npaddle1: row=%d, col=%d\npaddle2: row=%d, col=%d\n",
 	// 	ball.row, ball.col,
 	// 	player1Paddle.row, player1Paddle.col,
 	// 	player2Paddle.row, player2Paddle.col,
@@ -222,7 +263,8 @@ func updateState() {
 		ball.velRow = -ball.velRow
 	}
 
-	if collidesWithPaddle(ball, player1Paddle) || collidesWithPaddle(ball, player2Paddle) {
+	if collidesWithPaddle(ball, player1Paddle) ||
+		collidesWithPaddle(ball, player2Paddle) {
 		ball.velCol = -ball.velCol
 	}
 }
@@ -273,6 +315,20 @@ func print(row, col, width, height int, ch rune, color tcell.Style) {
 	for r := 0; r < height; r++ {
 		for c := 0; c < width; c++ {
 			screen.SetContent(col+c, row+r, ch, nil, color)
+		}
+	}
+}
+
+func printPongTable() {
+	screenWidth, screenHeight := screen.Size()
+	for r := BoundaryOffsetRow; r < screenHeight-BoundaryOffsetRow; r++ {
+		for c := BoundaryOffsetCol + 1; c < screenWidth-BoundaryOffsetCol-1; c++ {
+			if c == screenWidth/2 {
+				screen.SetContent(c, r, 0x20, nil, netColor)
+			} else {
+				screen.SetContent(c, r, 0x20, nil, tableColor)
+			}
+
 		}
 	}
 }
